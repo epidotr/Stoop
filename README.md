@@ -1,4 +1,6 @@
-# Stoop (rough draft)
+# Stoop: A neighborhood tool-borrowing tracker
+
+![Stoop's map view with nearby tools and a borrow request panel](stoop-ui.jpg)
 
 Neighborhood tool-lending, as a Django app in a native desktop window.
 
