@@ -48,3 +48,10 @@ class Event(models.Model):
     kind = models.CharField(max_length=20, default="gossip")
     text = models.CharField(max_length=240)
     created = models.DateTimeField(default=timezone.now)
+
+class Wish(models.Model):
+    """Wanted board: 'I need a ___'. Any other neighbor can say they've got one."""
+    author = models.ForeignKey(Neighbor, on_delete=models.CASCADE, related_name="wishes")
+    text = models.CharField(max_length=120)
+    created = models.DateTimeField(default=timezone.now)
+    granted_by = models.ForeignKey(Neighbor, null=True, blank=True, on_delete=models.SET_NULL, related_name="granted")

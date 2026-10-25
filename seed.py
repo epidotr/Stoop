@@ -1,7 +1,7 @@
 import random
 from datetime import timedelta
 from django.utils import timezone
-from .models import Neighbor, Tool, Loan, AppState
+from .models import Neighbor, Tool, Loan, Wish, AppState
 
 INTERVAL = timedelta(days=7)
 POOL = [  # tools that can show up in the neighborhood over time: (name, category, notes)
@@ -50,5 +50,8 @@ def ensure_seed():
     ladder = Tool.objects.create(owner=dev, name="Extension ladder", category="Garden", description="24 ft, aluminium.")
     Tool.objects.create(owner=rosa, name="Wet tile saw", category="Power tools", description="Blade included, bring your own water.")
     Tool.objects.create(owner=jonah, name="Pasta maker", category="Kitchen", description="Hand crank, three cutters.")
+    Wish.objects.create(author=dev, text="someone who understands gutters")
+    Wish.objects.create(author=rosa, text="a 10mm socket (the universe ate mine)")
+    Wish.objects.create(author=jonah, text="a cake pan shaped like a duck")
     Loan.objects.create(tool=ladder, borrower=maya, status="approved", message="Gutters this weekend",
                         days=7, due=timezone.now() - timedelta(days=2))  # demo: already overdue, for the shame text
