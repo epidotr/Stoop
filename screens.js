@@ -44,7 +44,10 @@
     if (document.hidden) return;
     try {
       const r = await baseApi('/api/gazette?since=' + lastId);
-      if (r.events && r.events.length) { feed = [...r.events, ...feed].slice(0, 60); lastId = r.events[0].id; paint(); }
+      if (r.events && r.events.length) {
+        if (lastId && window.Town) r.events.slice().reverse().forEach(window.Town.onEvent);   // only brand-new events, not the first backlog
+        feed = [...r.events, ...feed].slice(0, 60); lastId = r.events[0].id; paint();
+      }
     } catch (err) { /* server napping, try again next tick */ }
   }
   SCREENS.gazette = {
