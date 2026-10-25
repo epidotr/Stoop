@@ -50,4 +50,5 @@ def ensure_seed():
     ladder = Tool.objects.create(owner=dev, name="Extension ladder", category="Garden", description="24 ft, aluminium.")
     Tool.objects.create(owner=rosa, name="Wet tile saw", category="Power tools", description="Blade included, bring your own water.")
     Tool.objects.create(owner=jonah, name="Pasta maker", category="Kitchen", description="Hand crank, three cutters.")
-    Loan.objects.create(tool=ladder, borrower=maya, status="approved", message="Gutters this weekend")
+    Loan.objects.create(tool=ladder, borrower=maya, status="approved", message="Gutters this weekend",
+                        days=7, due=timezone.now() - timedelta(days=2))  # demo: already overdue, for the shame text

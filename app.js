@@ -24,8 +24,14 @@ function mapSvg(tools) {
 function detail() {
   const t = S.tools.find(x => x.id === sel);
   if (!t) return '<div class="detail empty">Pick a tool on the map or list.</div>';
-  const ask = t.asked ? '<button disabled>Request sent</button>' : t.status === 'out' ? '<button disabled>Currently out</button>' : `<textarea id="msg" rows="2" placeholder="Say hi, when do you need it?"></textarea><button class="primary" data-ask="${t.id}">Ask ${esc(t.owner)} to borrow</button>`;
+  const ask = t.asked ? '<button disabled>Request sent</button>' : t.status === 'out' ? '<button disabled>Currently out</button>' : `<textarea id="msg" rows="2" placeholder="Say hi, when do you need it?"></textarea><label class="days">Keep it for <select id="days"><option value="3">3 days</option><option value="7" selected>1 week</option><option value="14">2 weeks</option></select></label><button class="primary" data-ask="${t.id}">Ask ${esc(t.owner)} to borrow</button>`;
   return `<div class="detail"><b style="font-size:20px">${esc(t.name)}</b><small>${esc(t.owner)} · ${t.distance} mi · ${esc(t.category)}</small><p>${esc(t.description) || 'No notes.'}</p>${ask}</div>`;
+}
+function dueLine(l) {  // "due in 3 days" / funny shame text when late
+  if (l.status !== 'approved' || !l.due) return '';
+  if (l.late_days > 0) return `<small class="due late">${esc(l.shame)}</small>`;
+  const d = Math.ceil((new Date(l.due) - Date.now()) / 864e5);
+  return `<small class="due">Due ${d <= 1 ? 'tomorrow-ish' : 'in ' + d + ' days'}</small>`;
 }
 function render() {
   $('#me').innerHTML = S.neighbors.map(n => `<option value="${n.id}" ${n.id === S.me.id ? 'selected' : ''}>${esc(n.name)}</option>`).join('');
@@ -43,16 +49,17 @@ function render() {
     const mine = S.tools.filter(t => t.mine);
     v.innerHTML = `<div class="full">${mine.map(t => card(t, `<button data-del="${t.id}">Remove</button>`)).join('') || `<div class="empty">${esc(fun('empty_mine', 'You have not listed anything yet. Press Ctrl N.'))}</div>`}</div>`;
   } else {
-    const row = l => `<div class="card" style="cursor:default"><div style="flex:1"><b>${esc(l.tool)}</b><small>${l.incoming ? esc(l.borrower) + ' wants it' : 'You asked ' + esc(l.owner)}${l.message ? ' · "' + esc(l.message) + '"' : ''}</small></div><span class="${l.status === 'approved' ? 'free' : ''}">${esc(l.status)}</span>
+    const row = l => `<div class="card" style="cursor:default"><div style="flex:1"><b>${esc(l.tool)}</b><small>${l.incoming ? esc(l.borrower) + ' wants it' : 'You asked ' + esc(l.owner)}${l.message ? ' · "' + esc(l.message) + '"' : ''}</small>${dueLine(l)}</div><span class="${l.status === 'approved' ? 'free' : ''}">${esc(l.status)}</span>
     ${l.incoming && l.status === 'requested' ? `<button class="primary" data-loan="${l.id}" data-a="approve">Approve</button><button data-loan="${l.id}" data-a="decline">Decline</button>` : ''}
-    ${l.incoming && l.status === 'approved' ? `<button data-loan="${l.id}" data-a="return">Mark returned</button>` : ''}</div>`;
+    ${l.incoming && l.status === 'approved' ? `<button data-loan="${l.id}" data-a="return">Mark returned</button>` : ''}
+    ${l.incoming && l.status === 'approved' && l.late_days > 0 ? `<button data-loan="${l.id}" data-a="nudge">Nudge 👀</button>` : ''}</div>`;
     v.innerHTML = `<div class="full">${S.loans.map(row).join('') || `<div class="empty">${esc(fun('empty_loans', 'No requests yet.'))}</div>`}</div>`;
   }
 }
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-tool]'), n = e.target.closest('[data-view]'), c = e.target.closest('[data-cat]');
   const ask = e.target.closest('[data-ask]'), del = e.target.closest('[data-del]'), ln = e.target.closest('[data-loan]');
-  if (ask) { await api(`/api/tools/${ask.dataset.ask}/request`, {message: ($('#msg') || {}).value}); await load(); }
+  if (ask) { await api(`/api/tools/${ask.dataset.ask}/request`, {message: ($('#msg') || {}).value, days: +($('#days') || {}).value || 7}); await load(); }
   else if (del) { delId = +del.dataset.del; $('#delName').textContent = S.tools.find(x => x.id === delId).name; $('#del').showModal(); }
   else if (ln) { await api(`/api/loans/${ln.dataset.loan}/${ln.dataset.a}`, {}); await load(); }
   else if (n) { view = n.dataset.view; render(); }

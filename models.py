@@ -32,6 +32,16 @@ class Loan(models.Model):
     status = models.CharField(max_length=10, choices=STATUSES, default="requested")
     message = models.CharField(max_length=240, blank=True)
     created = models.DateTimeField(auto_now_add=True)
+    days = models.PositiveSmallIntegerField(default=7)      # how long the borrower asked to keep it
+    due = models.DateTimeField(null=True, blank=True)       # set when the owner approves
+    returned_at = models.DateTimeField(null=True, blank=True)
+
+    def late_days(self, now=None):
+        """0 unless the tool is out and past due; then 1, 2, 3... (any part of a day late counts)."""
+        now = now or timezone.now()
+        if self.status != "approved" or not self.due or now <= self.due:
+            return 0
+        return int((now - self.due).total_seconds() // 86400) + 1
 
 class Event(models.Model):
     """Town Gazette feed: everything that happens gets a (hopefully funny) headline."""

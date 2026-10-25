@@ -1,4 +1,6 @@
 import json
+from datetime import timedelta
+from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -40,6 +42,8 @@ def state(request):
     loans = [{
         "id": l.id, "tool": l.tool.name, "owner": l.tool.owner.name, "borrower": l.borrower.name,
         "status": l.status, "message": l.message, "incoming": l.tool.owner_id == me.id,
+        "days": l.days, "due": l.due.isoformat() if l.due else None,
+        "late_days": l.late_days(), "shame": jokes.shame(l.late_days()),
     } for l in Loan.objects.select_related("tool__owner", "borrower").order_by("-created")
         if l.tool.owner_id == me.id or l.borrower_id == me.id]
     return JsonResponse({
@@ -81,7 +85,12 @@ def delete_tool(request, pk):
 def request_loan(request, pk):
     me, tool = _me(), Tool.objects.get(pk=pk)
     if tool.owner_id != me.id and not tool.loans.filter(borrower=me, status__in=["requested", "approved"]).exists():
-        Loan.objects.create(tool=tool, borrower=me, message=(_body(request).get("message") or "")[:240])
+        d = _body(request)
+        try:
+            days = min(30, max(1, int(d.get("days") or 7)))
+        except (TypeError, ValueError):
+            days = 7
+        Loan.objects.create(tool=tool, borrower=me, days=days, message=(d.get("message") or "")[:240])
         gazette.log("ask", jokes.headline("ask", a=_short(me), b=_short(tool.owner), t=tool.name))
     return JsonResponse({"ok": True})
 
@@ -91,12 +100,14 @@ def loan_action(request, pk, action):
     if loan.tool.owner_id == me.id:
         if action == "approve" and loan.status == "requested" and not loan.tool.loans.filter(status="approved").exists():
             loan.status = "approved"
+            loan.due = timezone.now() + timedelta(days=loan.days)
             _news("approve", loan)
         elif action == "decline" and loan.status == "requested":
             loan.status = "declined"
             _news("decline", loan)
         elif action == "return" and loan.status == "approved":
             loan.status = "returned"
+            loan.returned_at = timezone.now()
             _news("return", loan)
         elif action == "nudge" and loan.status == "approved":
             _news("nudge", loan)
