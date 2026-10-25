@@ -50,3 +50,5 @@ dialog label{display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bo
 /* --- due dates --- */
 .days{font-size:13px;display:flex;gap:8px;align-items:center;color:var(--muted)}
 .due{color:var(--muted)}.due.late{color:#B3260E;font-weight:600}
+/* --- wanted board --- */
+.wishform{display:flex;gap:10px;margin:8px 0}.wishform input{flex:1}#wishes{display:flex;flex-direction:column;gap:10px}
