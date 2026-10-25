@@ -1,5 +1,6 @@
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fun = (k, d) => (window.quip ? window.quip(k) : d);  // funny text from screens.js, falls back to plain
 let delId = null, S = null, view = 'map', sel = null, q = '', cat = 'All';
 const csrf = () => (document.cookie.split('; ').find(c => c.startsWith('csrftoken=')) || '').split('=')[1] || '';
 async function api(url, body) {
@@ -37,15 +38,15 @@ function render() {
   const v = $('#view');
   if (view === 'map') {
     const ts = visible();
-    v.innerHTML = `<div class="map">${mapSvg(ts)}</div><div class="panel">${detail()}${ts.map(t => card(t)).join('') || '<div class="empty">No tools match.</div>'}</div>`;
+    v.innerHTML = `<div class="map">${mapSvg(ts)}</div><div class="panel">${detail()}${ts.map(t => card(t)).join('') || `<div class="empty">${esc(fun('empty_map', 'No tools match.'))}</div>`}</div>`;
   } else if (view === 'mine') {
     const mine = S.tools.filter(t => t.mine);
-    v.innerHTML = `<div class="full">${mine.map(t => card(t, `<button data-del="${t.id}">Remove</button>`)).join('') || '<div class="empty">You have not listed anything yet. Press Ctrl N.</div>'}</div>`;
+    v.innerHTML = `<div class="full">${mine.map(t => card(t, `<button data-del="${t.id}">Remove</button>`)).join('') || `<div class="empty">${esc(fun('empty_mine', 'You have not listed anything yet. Press Ctrl N.'))}</div>`}</div>`;
   } else {
     const row = l => `<div class="card" style="cursor:default"><div style="flex:1"><b>${esc(l.tool)}</b><small>${l.incoming ? esc(l.borrower) + ' wants it' : 'You asked ' + esc(l.owner)}${l.message ? ' · "' + esc(l.message) + '"' : ''}</small></div><span class="${l.status === 'approved' ? 'free' : ''}">${esc(l.status)}</span>
     ${l.incoming && l.status === 'requested' ? `<button class="primary" data-loan="${l.id}" data-a="approve">Approve</button><button data-loan="${l.id}" data-a="decline">Decline</button>` : ''}
     ${l.incoming && l.status === 'approved' ? `<button data-loan="${l.id}" data-a="return">Mark returned</button>` : ''}</div>`;
-    v.innerHTML = `<div class="full">${S.loans.map(row).join('') || '<div class="empty">No requests yet.</div>'}</div>`;
+    v.innerHTML = `<div class="full">${S.loans.map(row).join('') || `<div class="empty">${esc(fun('empty_loans', 'No requests yet.'))}</div>`}</div>`;
   }
 }
 document.addEventListener('click', async e => {
