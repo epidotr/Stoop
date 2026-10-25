@@ -32,3 +32,9 @@ class Loan(models.Model):
     status = models.CharField(max_length=10, choices=STATUSES, default="requested")
     message = models.CharField(max_length=240, blank=True)
     created = models.DateTimeField(auto_now_add=True)
+
+class Event(models.Model):
+    """Town Gazette feed: everything that happens gets a (hopefully funny) headline."""
+    kind = models.CharField(max_length=20, default="gossip")
+    text = models.CharField(max_length=240)
+    created = models.DateTimeField(default=timezone.now)
