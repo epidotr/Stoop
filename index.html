@@ -9,7 +9,9 @@
     <button data-view="map" class="nav">Map <kbd>1</kbd></button>
     <button data-view="mine" class="nav">My tools <kbd>2</kbd></button>
     <button data-view="loans" class="nav">Requests <span id="badge"></span><kbd>3</kbd></button>
+    <button data-view="gazette" class="nav">Gazette <kbd>4</kbd></button>
   </nav>
+  <div id="ticker" class="ticker"></div>
   <div id="next" class="next"></div>
   <label class="as">Acting as<select id="me"></select></label>
 </aside>
@@ -33,5 +35,7 @@
   <p>This also cancels any requests for it. You can always list it again.</p>
   <div class="row"><button value="cancel">Keep it</button><button class="primary" value="ok">Remove</button></div>
 </form></dialog>
+<div id="toast" role="status"></div>
 <script src="{% static 'lending/app.js' %}"></script>
+<script src="{% static 'lending/screens.js' %}"></script>
 </body></html>
