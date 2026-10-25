@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+stoop.sqlite3
+lending/migrations/0*.py
+.DS_Store

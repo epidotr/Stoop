@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Stoop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="{% static 'lending/app.css' %}"></head>
+<body>
+<aside>
+  <div class="logo">Stoop</div>
+  <nav>
+    <button data-view="map" class="nav">Map <kbd>1</kbd></button>
+    <button data-view="mine" class="nav">My tools <kbd>2</kbd></button>
+    <button data-view="loans" class="nav">Requests <span id="badge"></span><kbd>3</kbd></button>
+  </nav>
+  <div id="next" class="next"></div>
+  <label class="as">Acting as<select id="me"></select></label>
+</aside>
+<main>
+  <header>
+    <input id="q" type="search" placeholder="Search tools   ( / )" aria-label="Search tools">
+    <div id="chips"></div>
+    <button id="addBtn" class="primary">Add tool <kbd>Ctrl N</kbd></button>
+  </header>
+  <section id="view"></section>
+</main>
+<dialog id="add"><form method="dialog" id="addForm">
+  <h2>Add a tool to lend</h2>
+  <label>Name<input name="name" required maxlength="80"></label>
+  <label>Category<select name="category"><option>Power tools</option><option>Garden</option><option>Kitchen</option><option>Other</option></select></label>
+  <label>Notes<textarea name="description" rows="3"></textarea></label>
+  <div class="row"><button value="cancel" formnovalidate>Cancel</button><button class="primary" value="ok">Save</button></div>
+</form></dialog>
+<dialog id="del"><form method="dialog" id="delForm">
+  <h2>Remove <span id="delName"></span>?</h2>
+  <p>This also cancels any requests for it. You can always list it again.</p>
+  <div class="row"><button value="cancel">Keep it</button><button class="primary" value="ok">Remove</button></div>
+</form></dialog>
+<script src="{% static 'lending/app.js' %}"></script>
+</body></html>
