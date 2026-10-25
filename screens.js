@@ -10,7 +10,7 @@
   let toastTimer;
   window.toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2800); };
   const TOASTS = [[/^\/api\/tools$/, 'toast_add'], [/\/delete$/, 'toast_remove'], [/\/request$/, 'toast_ask'],
-                  [/\/loans\/\d+\/approve$/, 'toast_approve'], [/\/decline$/, 'toast_decline'], [/\/return$/, 'toast_return'], [/\/nudge$/, 'toast_nudge']];
+                  [/wishes\/add$/, 'toast_wish'], [/wishes\/\d+\/grant$/, 'toast_grant'], [/\/loans\/\d+\/approve$/, 'toast_approve'], [/\/decline$/, 'toast_decline'], [/\/return$/, 'toast_return'], [/\/nudge$/, 'toast_nudge']];
   const baseApi = api;
   api = async function (url, body) {                    // wrapper: same behaviour, plus a quip when a POST succeeds
     const r = await baseApi(url, body);
@@ -52,5 +52,28 @@
     after: paint,
   };
   poll(); setInterval(poll, 5000);
+  // ---------- Wanted board: "I need a ___" ----------
+  let wishes = null;
+  const wishRow = w => `<div class="card" style="cursor:default"><div class="ico ${w.granted_by ? '' : 'coral'}"></div><div style="flex:1"><b>${esc(w.mine ? 'You are' : w.author + ' is')} looking for ${esc(w.text)}</b><small>${w.granted_by ? '✅ ' + esc(w.granted_by) + ' has one!' : ago(w.created)}</small></div>
+    ${w.can_grant ? `<button class="primary" data-wish-grant="${w.id}">I've got one!</button>` : ''}${w.mine ? `<button data-wish-del="${w.id}">Remove</button>` : ''}</div>`;
+  const paintWishes = () => { const el = $('#wishes'); if (el && wishes) el.innerHTML = wishes.map(wishRow).join('') || `<div class="empty">${esc(window.quip('empty_wanted'))}</div>`; };
+  const loadWishes = async () => { wishes = (await baseApi('/api/wishes')).wishes; paintWishes(); };
+  SCREENS.wanted = {
+    html: () => `<div class="full"><h2 style="margin:6px 0 0">Wanted</h2><small class="due">Need something nobody has listed? Ask the street.</small>
+      <form id="wishForm" class="wishform"><input id="wishText" maxlength="120" placeholder="Looking for ${esc(window.quip('wish_hint'))}..." autocomplete="off"><button class="primary">Post wish</button></form><div id="wishes"></div></div>`,
+    after: () => { paintWishes(); loadWishes(); },
+  };
+  document.addEventListener('submit', async e => {
+    if (e.target.id !== 'wishForm') return;
+    e.preventDefault();
+    const text = $('#wishText').value.trim();
+    if (text) { await api('/api/wishes/add', {text}); await loadWishes(); $('#wishText').value = ''; }
+  });
+  document.addEventListener('click', async e => {
+    const g = e.target.closest('[data-wish-grant]'), d = e.target.closest('[data-wish-del]');
+    if (g) { await api(`/api/wishes/${g.dataset.wishGrant}/grant`, {}); await loadWishes(); }
+    else if (d) { await api(`/api/wishes/${d.dataset.wishDel}/delete`, {}); await loadWishes(); }
+  });
+
   if (S) render();                                      // app.js may have rendered before we loaded
 })();

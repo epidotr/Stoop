@@ -12,4 +12,8 @@ urlpatterns = [
     path("api/loans/<int:pk>/<str:action>", views.loan_action),
     path("api/gazette", x.gazette_feed),
     path("api/wave", x.wave),
+    path("api/wishes", x.wishes),
+    path("api/wishes/add", x.add_wish),
+    path("api/wishes/<int:pk>/grant", x.grant_wish),
+    path("api/wishes/<int:pk>/delete", x.delete_wish),
 ]
