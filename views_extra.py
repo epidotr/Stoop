@@ -2,7 +2,7 @@
 import random
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from . import jokes, gazette
+from . import jokes, gazette, awards
 from .models import Neighbor
 from .views import _me, _body, _short
 
@@ -12,6 +12,9 @@ def gazette_feed(request):
     except ValueError:
         since = 0
     return JsonResponse({"events": gazette.feed(since)})
+
+def fame(request):
+    return JsonResponse({"rows": awards.standings()})
 
 @require_POST
 def wave(request):
