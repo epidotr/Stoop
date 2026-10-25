@@ -4,10 +4,14 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 from .models import Neighbor, Tool, Loan
+from . import jokes, gazette
 from .seed import ensure_seed, tick, get_state, INTERVAL
 
 def _me():
     return Neighbor.objects.filter(is_me=True).first()
+
+def _short(n):
+    return n.name.replace(" (you)", "")
 
 def _body(request):
     try:
@@ -40,8 +44,8 @@ def state(request):
         if l.tool.owner_id == me.id or l.borrower_id == me.id]
     return JsonResponse({
         "me": {"id": me.id, "name": me.name, "x": me.x, "y": me.y},
-        "neighbors": [{"id": n.id, "name": n.name} for n in Neighbor.objects.all()],
-        "tools": tools, "loans": loans,
+        "neighbors": [{"id": n.id, "name": n.name, "street": n.street, "x": n.x, "y": n.y} for n in Neighbor.objects.all()],
+        "tools": tools, "loans": loans, "quips": jokes.LINES,
         "next_tool_at": (get_state().last_tool_added + INTERVAL).isoformat(),
     })
 
@@ -58,13 +62,19 @@ def add_tool(request):
     name = (d.get("name") or "").strip()
     if not name:
         return JsonResponse({"error": "Name is required"}, status=400)
-    Tool.objects.create(owner=_me(), name=name[:80], category=d.get("category") or "Power tools",
+    me = _me()
+    Tool.objects.create(owner=me, name=name[:80], category=d.get("category") or "Power tools",
                         description=(d.get("description") or "")[:500])
+    gazette.log("add", jokes.headline("add", a=_short(me), t=name[:80]))
     return JsonResponse({"ok": True})
 
 @require_POST
 def delete_tool(request, pk):
-    Tool.objects.filter(pk=pk, owner=_me()).delete()
+    me = _me()
+    tool = Tool.objects.filter(pk=pk, owner=me).first()
+    if tool:
+        gazette.log("remove", jokes.headline("remove", a=_short(me), t=tool.name))
+        tool.delete()
     return JsonResponse({"ok": True})
 
 @require_POST
@@ -72,6 +82,7 @@ def request_loan(request, pk):
     me, tool = _me(), Tool.objects.get(pk=pk)
     if tool.owner_id != me.id and not tool.loans.filter(borrower=me, status__in=["requested", "approved"]).exists():
         Loan.objects.create(tool=tool, borrower=me, message=(_body(request).get("message") or "")[:240])
+        gazette.log("ask", jokes.headline("ask", a=_short(me), b=_short(tool.owner), t=tool.name))
     return JsonResponse({"ok": True})
 
 @require_POST
@@ -80,9 +91,17 @@ def loan_action(request, pk, action):
     if loan.tool.owner_id == me.id:
         if action == "approve" and loan.status == "requested" and not loan.tool.loans.filter(status="approved").exists():
             loan.status = "approved"
+            _news("approve", loan)
         elif action == "decline" and loan.status == "requested":
             loan.status = "declined"
+            _news("decline", loan)
         elif action == "return" and loan.status == "approved":
             loan.status = "returned"
+            _news("return", loan)
+        elif action == "nudge" and loan.status == "approved":
+            _news("nudge", loan)
         loan.save()
     return JsonResponse({"ok": True})
+
+def _news(kind, loan):
+    gazette.log(kind, jokes.headline(kind, a=_short(loan.borrower), b=_short(loan.tool.owner), t=loan.tool.name))
