@@ -52,3 +52,6 @@ dialog label{display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bo
 .due{color:var(--muted)}.due.late{color:#B3260E;font-weight:600}
 /* --- wanted board --- */
 .wishform{display:flex;gap:10px;margin:8px 0}.wishform input{flex:1}#wishes{display:flex;flex-direction:column;gap:10px}
+/* --- hall of fame --- */
+.rank{font-size:26px;width:44px;text-align:center;flex:none}.karma{text-align:center}.karma b{font-size:26px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.badge{background:var(--bg);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}

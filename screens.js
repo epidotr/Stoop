@@ -75,5 +75,18 @@
     else if (d) { await api(`/api/wishes/${d.dataset.wishDel}/delete`, {}); await loadWishes(); }
   });
 
+  // ---------- Hall of Fame: karma + badges ----------
+  let fame = null;
+  const fameRow = r => `<div class="card ${r.is_me ? 'on' : ''}" style="cursor:default"><div class="rank">${['🥇', '🥈', '🥉'][r.rank - 1] || '#' + r.rank}</div>
+    <div style="flex:1"><b>${esc(r.name)}${r.is_me ? ' (you)' : ''}</b> <small style="display:inline">· ${esc(r.title)}</small>
+    <small>${r.lent} lent · ${r.borrowed} borrowed · ${r.tools} listed · ${r.late} late · ${r.granted} wishes granted</small>
+    <div class="badges">${r.badges.map(b => `<span class="badge">${b.icon} ${esc(b.title)}</span>`).join('')}</div></div>
+    <div class="karma"><b>${r.karma}</b><small>karma</small></div></div>`;
+  const paintFame = () => { const el = $('#fame'); if (el && fame) el.innerHTML = fame.map(fameRow).join(''); };
+  SCREENS.fame = {
+    html: () => `<div class="full"><h2 style="margin:6px 0 0">Hall of Fame</h2><small class="due">Karma: lending earns it, returning on time keeps it, lateness spends it.</small><div id="fame" class="full" style="margin-top:8px"></div></div>`,
+    after: async () => { paintFame(); fame = (await baseApi('/api/fame')).rows; paintFame(); },
+  };
+
   if (S) render();                                      // app.js may have rendered before we loaded
 })();
