@@ -93,5 +93,83 @@
   const core = {STREETS, dots, stats, step, sync, makeDot, say, pos, nearest, NPCS, GENERIC, rnd, pickOne};
   if (typeof document === 'undefined') { module.exports = core; return; }
 
-  // (browser layer comes next)
+  // ---------- part 2: draw it on the map (wraps render() so the dots survive app.js re-rendering the SVG) ----------
+  const NS = 'http://www.w3.org/2000/svg';
+  let layer = null, els = {}, paused = false, speed = 1, last = 0;
+  const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); Object.keys(attrs).forEach(k => e.setAttribute(k, attrs[k])); if (parent) parent.appendChild(e); return e; };
+
+  function build(d) {
+    const g = mk('g', {'data-dot': d.id, style: 'cursor:pointer'}, layer);
+    if (d.kind === 'me') mk('circle', {r: 3.6, fill: '#3A4BFF', opacity: .2}, g);
+    mk('circle', {r: d.npc ? 1.3 : 1.9, fill: d.color, stroke: '#fff', 'stroke-width': .5}, g);
+    if (!d.npc) { const t = mk('text', {y: -3, 'font-size': 2.2, 'text-anchor': 'middle', 'font-weight': 800, fill: '#1B1B2F', 'paint-order': 'stroke', stroke: '#FFF8DC', 'stroke-width': .7}, g); t.textContent = d.name; }
+    els[d.id] = {g, bub: null};
+  }
+  function paint() {
+    dots.forEach(d => {
+      const e = els[d.id]; if (!e) return;
+      const [x, y] = pos(d);
+      e.g.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
+      if (d.say) {
+        if (!e.bub) { e.bub = mk('g', {}, e.g); mk('rect', {rx: 1.2, fill: '#fff', stroke: '#1B1B2F', 'stroke-width': .25, height: 4.4, y: -3.2}, e.bub); mk('text', {'font-size': 2.2, 'text-anchor': 'middle', fill: '#1B1B2F', 'font-weight': 600}, e.bub); }
+        const w = d.say.text.length * 1.25 + 3, dx = Math.max(1 + w / 2 - x, Math.min(99 - w / 2 - x, 0));  // keep the bubble inside the map
+        e.bub.setAttribute('transform', `translate(${dx.toFixed(2)} -7.5)`);
+        const r = e.bub.firstChild, t = e.bub.lastChild;
+        r.setAttribute('width', w); r.setAttribute('x', -w / 2); t.setAttribute('y', 0); t.textContent = d.say.text;
+      } else if (e.bub) { e.bub.remove(); e.bub = null; }
+    });
+  }
+  function counts() { const c = $('#tCount'); if (c) c.textContent = `${dots.length} people out · ${stats.chats} chats`; }
+  function mount() {
+    layer = null; els = {};
+    const svg = document.querySelector('.map svg');
+    if (!svg) return;                                          // not on the map view
+    sync(S.neighbors, S.me.id);
+    layer = mk('g', {id: 'dots'}, svg);
+    dots.forEach(build);
+    const bar = document.createElement('div');
+    bar.className = 'townbar';
+    bar.innerHTML = `<button id="tPause">${paused ? '▶ Play' : '⏸ Pause'}</button><button id="tRush">🚶 Rush hour</button><button id="tEmpty">🏠 Everyone go home</button>
+      <label>Speed <input id="tSpeed" type="range" min=".5" max="3" step=".5" value="${speed}"></label><span id="tCount"></span>`;
+    svg.parentNode.appendChild(bar);
+    counts();
+  }
+  function frame(ts) {
+    const dt = Math.min(0.1, (ts - last) / 1000); last = ts;
+    if (layer && layer.isConnected) { if (!paused) { const c = stats.chats; step(dt * speed); if (c !== stats.chats) counts(); } paint(); }
+    requestAnimationFrame(frame);
+  }
+
+  async function poke(id) {  // click a dot: it says something; clicking a neighbor also sends them a wave (and a Gazette headline)
+    const d = dots.find(x => x.id === id); if (!d) return;
+    if (d.kind === 'me') return say(d, 'Yep, that is you. Looking sharp.');
+    say(d, pickOne(d.lines.length ? d.lines : GENERIC)); d.wait = 1.5;
+    if (d.kind === 'neighbor') { const r = await api('/api/wave', {id: d.nid}); if (r && r.line) window.toast(r.line); }
+  }
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-dot]');
+    if (g) return poke(g.dataset.dot);
+    if (e.target.closest('#tPause')) { paused = !paused; $('#tPause').textContent = paused ? '▶ Play' : '⏸ Pause'; }
+    else if (e.target.closest('#tRush')) {
+      for (let i = 0; i < 6 && dots.length < 40; i++) { const d = makeDot({npc: true, extra: true, name: 'Commuter', speed: rnd(1.5, 4.5), color: pickOne(['#E0457B', '#00A6A6', '#F28C28', '#9B5DE5']), lines: GENERIC}); build(d); }
+      counts();
+    } else if (e.target.closest('#tEmpty')) {
+      for (let i = dots.length - 1; i >= 0; i--) if (dots[i].extra) { els[dots[i].id] && els[dots[i].id].g.remove(); delete els[dots[i].id]; dots.splice(i, 1); }
+      counts();
+    }
+  });
+  document.addEventListener('input', e => { if (e.target.id === 'tSpeed') speed = +e.target.value; });
+
+  const REACT = {ask: '🙏', approve: '🎉', return: '📦', wish: '🔍', grant: '🦸', nudge: '😬', wave: '👋', add: '🔨', remove: '🗑️'};
+  window.Town = {  // screens.js feeds every fresh Gazette event in here, so the street reacts in real time
+    onEvent(ev) {
+      if (!REACT[ev.kind]) return;
+      dots.filter(d => !d.npc && ev.text.includes(d.name)).forEach(d => { say(d, REACT[ev.kind], 4); d.wait = 2; });
+    },
+  };
+
+  const baseRender = render;
+  render = function () { baseRender(); mount(); };
+  requestAnimationFrame(frame);
+  if (S) render();
 })();
